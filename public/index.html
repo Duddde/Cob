@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SnowBall — laissez vos intérêts faire boule de neige</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9D%84%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="logo"><span class="flake">❄️</span> SnowBall</div>
+      <nav aria-label="Navigation">
+        <a href="#top"><span class="ico">⌂</span> Accueil</a>
+        <a href="#alloc"><span class="ico">◔</span> Répartition</a>
+        <a href="#chart-card"><span class="ico">⟋</span> Projection</a>
+        <a href="#assets"><span class="ico">◈</span> Actifs</a>
+        <a href="#table-card"><span class="ico">≣</span> Tableau</a>
+        <a href="#methodology"><span class="ico">✧</span> Méthodo</a>
+      </nav>
+      <div class="side-foot">
+        Open source · MIT<br />
+        <a href="https://github.com/duddde/cob">github.com/duddde/cob</a>
+      </div>
+    </aside>
+    <div class="main" id="top">
+    <header class="site">
+      <h1>Mon portefeuille</h1>
+      <span class="tagline">Laissez vos intérêts faire boule de neige : votre capital dans 5, 10, 15, 20 ans.</span>
+    </header>
+
+    <p class="disclaimer">
+      ⚠️ <strong>Les performances passées ne préjugent pas des performances futures.</strong>
+      Ces projections extrapolent des rendements historiques documentés (voir la méthodologie
+      en bas de page) — ce sont des ordres de grandeur pédagogiques, pas des conseils en
+      investissement. La bande grisée du scénario montre à quel point l'incertitude domine.
+    </p>
+
+    <section class="controls" aria-label="Paramètres de la projection">
+      <div class="control">
+        <label for="capital">Capital initial</label>
+        <input type="number" id="capital" min="0" step="100" value="10000" />
+      </div>
+      <div class="control">
+        <label for="monthly">Versement mensuel</label>
+        <input type="number" id="monthly" min="0" step="50" value="0" />
+      </div>
+      <div class="control">
+        <label for="years">Horizon</label>
+        <select id="years">
+          <option value="5">5 ans</option>
+          <option value="10">10 ans</option>
+          <option value="15">15 ans</option>
+          <option value="20" selected>20 ans</option>
+          <option value="30">30 ans</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="scenario">Scénario de rendement</label>
+        <select id="scenario">
+          <option value="conservative">Prudent (prospectif)</option>
+          <option value="moderate">Modéré (long terme)</option>
+          <option value="historical" selected>Historique (10 dernières années)</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="divmode">Dividendes des ETF</label>
+        <select id="divmode">
+          <option value="acc" selected>Capitalisant (réinvestis)</option>
+          <option value="dist">Distribuant (encaissés)</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="currency">Devise</label>
+        <select id="currency">
+          <option value="eur" selected>€ EUR</option>
+          <option value="usd">$ USD</option>
+        </select>
+      </div>
+      <div class="control toggles">
+        <label><input type="checkbox" id="real" /> Pouvoir d'achat constant (− inflation)</label>
+        <label><input type="checkbox" id="log" checked /> Échelle log</label>
+      </div>
+    </section>
+
+    <div class="asset-picker" id="asset-picker" role="group" aria-label="Actifs du portefeuille"></div>
+
+    <section class="card alloc" id="alloc" hidden>
+      <div class="alloc-head">
+        <div>
+          <h2>Répartition du capital</h2>
+          <p class="sub" id="alloc-sub"></p>
+        </div>
+        <button type="button" class="btn" id="balance">Équilibrer</button>
+      </div>
+      <div class="alloc-bar" id="alloc-bar" aria-hidden="true"></div>
+      <div class="alloc-rows" id="alloc-rows"></div>
+    </section>
+
+    <section class="tiles" id="tiles" aria-label="Valeur projetée du portefeuille à 5, 10, 15 et 20 ans"></section>
+
+    <section class="card compound" id="compound" hidden>
+      <h2>💡 Effet des intérêts composés</h2>
+      <p class="sub" id="compound-text"></p>
+      <div class="compound-bars" id="compound-bars" role="img" aria-label="Comparaison capitalisant / distribuant"></div>
+    </section>
+
+    <section class="card" id="chart-card">
+      <h2 id="chart-title">Projection du portefeuille</h2>
+      <p class="sub" id="chart-sub"></p>
+      <div class="chart-box" id="chart-box">
+        <svg id="chart" role="img" aria-labelledby="chart-title"></svg>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="asset-cards" id="assets" aria-label="Détail par actif"></section>
+
+    <section class="card" id="table-card">
+      <h2>Vue tableau</h2>
+      <p class="sub">Portefeuille et poches par actif, année par année (scénario sélectionné). Les jalons 5 / 10 / 15 / 20 ans sont en gras.</p>
+      <div class="table-scroll">
+        <table class="results" id="results-table"></table>
+      </div>
+    </section>
+
+    <footer class="metho" id="methodology">
+      <h2>Méthodologie & sources</h2>
+      <p>
+        Les projections utilisent la capitalisation composée à partir de rendements géométriques
+        annualisés (CAGR) observés sur les historiques de prix. Le capital est réparti entre les
+        poches selon vos pourcentages (les versements mensuels suivent la même répartition). La
+        bande d'incertitude porte sur le <strong>portefeuille</strong> : chaque poche est simulée
+        par Monte Carlo (rendements mensuels log-normaux calés sur son CAGR et sa volatilité
+        historiques), les trajectoires sont sommées poche par poche, et la bande couvre 80&nbsp;%
+        des futurs simulés (percentiles 10 à 90). Hypothèse simplificatrice : poches simulées
+        indépendamment — les corrélations réelles entre actifs élargiraient la fourchette.
+        Inflation du mode «&nbsp;pouvoir d'achat constant&nbsp;» : 2,5&nbsp;%/an.
+      </p>
+      <p>
+        Chiffres, sources spécialisées et papiers de recherche utilisés :
+        <a href="https://github.com/duddde/cob/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>.
+        Points clés issus de la littérature :
+      </p>
+      <ul id="papers">
+        <li>Dimson, Marsh &amp; Staunton (2026). <a href="https://www.ubs.com/global/en/investment-bank/insights-and-data/articles/global-investment-returns-yearbook-2026.html"><em>Global Investment Returns Yearbook</em></a>, UBS / London Business School — 126 ans de données (1900-2025) : rendement <strong>réel</strong> des actions ≈ 6,6 %/an aux US, ≈ 5 %/an au niveau mondial.</li>
+        <li>Siegel, J. (2022). <em>Stocks for the Long Run</em>, 6ᵉ éd., McGraw-Hill — ≈ 6,7 %/an réel pour les actions US depuis 1802, remarquablement stable sur deux siècles.</li>
+        <li>Liu &amp; Tsyvinski (2021). <a href="https://academic.oup.com/rfs/article-abstract/34/6/2689/5912024">« Risks and Returns of Cryptocurrency »</a>, <em>Review of Financial Studies</em> — les rendements crypto sont pilotés par des facteurs propres au marché crypto (adoption, momentum, attention), pas par les facteurs actions classiques.</li>
+        <li>Jacquier, Kane &amp; Marcus (2003). <a href="https://www.tandfonline.com/doi/abs/10.2469/faj.v59.n6.2574">« Geometric or Arithmetic Mean: A Reconsideration »</a>, <em>Financial Analysts Journal</em> — composer la moyenne arithmétique surestime systématiquement les projections (« volatility drag », g ≈ μ − σ²/2) ; d'où l'usage du CAGR géométrique ici.</li>
+        <li>S&amp;P Dow Jones Indices. <a href="https://www.spglobal.com/spdji/en/documents/spiva/persistence-scorecard-january-2016.pdf"><em>The Persistence Scorecard</em></a> — moins de 1 % des fonds restent dans le top quartile 5 ans de suite : la performance passée ne prédit pas la future.</li>
+        <li>Bogle, J.C. (2002). <a href="https://johncbogle.com/speeches/JCB_Morningstar_6-02.pdf">« The Telltale Chart »</a> — le retour à la moyenne est omniprésent : les surperformances passées tendent à s'inverser.</li>
+        <li>Kitces &amp; Pfau (2015). <a href="https://www.financialplanningassociation.org/article/journal/MAR15-retirement-risk-rising-equity-glide-paths-and-valuation-based-asset">« Retirement Risk, Rising Equity Glide Paths… »</a>, <em>Journal of Financial Planning</em> — référence sur l'usage des simulations Monte Carlo en planification financière.</li>
+      </ul>
+      <p>
+        SnowBall est un projet open source (licence MIT). Rien ici ne constitue un conseil en
+        investissement.
+      </p>
+    </footer>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
