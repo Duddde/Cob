@@ -24,7 +24,9 @@ qui les entoure.
   dividendes encaissés ne composent plus — un panneau « Effet des intérêts composés »
   chiffre l'écart entre les deux à l'horizon choisi.
 - **Versements mensuels (DCA)**, devise € / $, **pouvoir d'achat constant** (inflation
-  déduite), **échelle logarithmique**, vue tableau année par année, mode sombre.
+  déduite), **échelle logarithmique**, vue tableau année par année.
+- **Thème « nuit polaire »** : dashboard sombre avec barre latérale, cartes translucides
+  et ligne de portefeuille lumineuse (palette de séries validée contraste + daltonisme).
 
 ## Démarrage
 

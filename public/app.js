@@ -359,6 +359,15 @@ let chartGeom = null; // pour le crosshair
 function renderChart() {
   const svg = $('chart');
   svg.replaceChildren();
+  // Dégradé du trait « Portefeuille » : blanc → bleu glacé, avec halo
+  const defs = svgEl('defs');
+  const grad = svgEl('linearGradient', { id: 'pf-grad', x1: 0, y1: 0, x2: 1, y2: 0 });
+  grad.append(
+    svgEl('stop', { offset: '0%', 'stop-color': '#ffffff' }),
+    svgEl('stop', { offset: '100%', 'stop-color': '#9fd0ff' })
+  );
+  defs.append(grad);
+  svg.append(defs);
   const { portfolio, series, invested } = computeAll();
   const band = computeBand();
   const { w, h, top, right, bottom, left } = CHART;
@@ -434,7 +443,7 @@ function renderChart() {
       .map((v, i) => `L${xFor(band.p10.length - 1 - i).toFixed(2)},${yFor(band.p10[band.p10.length - 1 - i]).toFixed(2)}`)
       .join('');
     svg.append(
-      svgEl('path', { d: `${up}${down}Z`, fill: PORTFOLIO_COLOR, opacity: 0.07, stroke: 'none' })
+      svgEl('path', { d: `${up}${down}Z`, fill: 'var(--ice)', opacity: 0.08, stroke: 'none' })
     );
   }
 
@@ -464,18 +473,20 @@ function renderChart() {
     );
   }
 
-  // Le portefeuille par-dessus tout : encre, 3px, point final plus gros
+  // Le portefeuille par-dessus tout : dégradé glacé lumineux, 3px
   svg.append(
     svgEl('path', {
       d: pathFrom(portfolio.values),
-      fill: 'none', stroke: PORTFOLIO_COLOR, 'stroke-width': 3,
+      fill: 'none', stroke: 'url(#pf-grad)', 'stroke-width': 3,
       'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      style: 'filter: drop-shadow(0 0 6px rgba(159, 208, 255, 0.55))',
     })
   );
   svg.append(
     svgEl('circle', {
       cx: xFor(years), cy: yFor(portfolio.values[years]), r: 5.5,
-      fill: PORTFOLIO_COLOR, stroke: 'var(--surface-1)', 'stroke-width': 2,
+      fill: 'var(--ice)', stroke: 'var(--surface-1)', 'stroke-width': 2,
+      style: 'filter: drop-shadow(0 0 6px rgba(159, 208, 255, 0.7))',
     })
   );
 
@@ -681,7 +692,7 @@ function renderTable() {
 // ---------------------------------------------------------------- cartes actifs
 
 function renderAssetCards() {
-  const box = $('asset-cards');
+  const box = $('assets');
   box.replaceChildren();
   const w = getWeights();
   for (const asset of selectedAssets()) {
