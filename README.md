@@ -17,6 +17,9 @@ qui les entoure.
   Nvidia, obligations US — chacun avec sa couleur fixe, superposés sur un même graphique.
 - **Trois scénarios sourcés** par actif : *Prudent* (estimations prospectives),
   *Modéré* (historique le plus long disponible), *Historique* (CAGR des 10 dernières années).
+- **Deux modes de saisie** : un budget en € réparti par curseurs, ou « Mes avoirs » —
+  vos quantités réelles (0,5 BTC, 12 parts de SPY…) valorisées au prix du jour, avec
+  bascule sans perte entre les deux.
 - **Tuiles 5 / 10 / 15 / 20 ans** pour l'actif en vedette, avec multiple vs montant versé.
 - **Bande d'incertitude** : simulation Monte Carlo (2 000 trajectoires, rendements mensuels
   log-normaux) couvrant 80 % des futurs simulés — parce qu'une ligne seule ment.

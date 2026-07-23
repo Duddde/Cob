@@ -92,7 +92,13 @@
           <h2>Répartition du capital</h2>
           <p class="sub" id="alloc-sub"></p>
         </div>
-        <button type="button" class="btn" id="balance">Équilibrer</button>
+        <div class="alloc-actions">
+          <div class="seg-toggle" role="group" aria-label="Mode de saisie">
+            <button type="button" id="mode-budget" aria-pressed="true">Budget (€)</button>
+            <button type="button" id="mode-holdings" aria-pressed="false">Mes avoirs (unités)</button>
+          </div>
+          <button type="button" class="btn" id="balance">Équilibrer</button>
+        </div>
       </div>
       <div class="alloc-bar" id="alloc-bar" aria-hidden="true"></div>
       <div class="alloc-rows" id="alloc-rows"></div>

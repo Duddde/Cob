@@ -22,6 +22,8 @@ const state = {
   divMode: 'acc', // 'acc' = ETF capitalisants (dividendes réinvestis), 'dist' = distribuants
   selected: ['btc', 'sp500', 'msciworld'],
   weights: { btc: 1 / 3, sp500: 1 / 3, msciworld: 1 / 3 }, // parts du capital, somme = 1
+  mode: 'budget', // 'budget' = capital en € réparti · 'holdings' = quantités détenues
+  holdings: {}, // { assetId: unités détenues } (mode 'holdings')
 };
 
 let CATALOG = [];
@@ -72,10 +74,37 @@ function selectedAssets() {
   return state.selected.map((id) => CATALOG.find((a) => a.id === id)).filter(Boolean);
 }
 
+/** Prix courant d'un actif (API en direct, sinon instantané du catalogue). */
+function priceOf(asset) {
+  return PRICES[asset.id]?.price ?? asset.spotPrice[state.currency];
+}
+
+/** Valeur d'une poche en mode « avoirs » : unités détenues × prix courant. */
+function pocketValue(asset) {
+  return (state.holdings[asset.id] || 0) * priceOf(asset);
+}
+
+function holdingsTotal() {
+  return selectedAssets().reduce((s, a) => s + pocketValue(a), 0);
+}
+
+/** Capital de départ effectif selon le mode. */
+function currentCapital() {
+  return state.mode === 'holdings' ? holdingsTotal() : state.capital;
+}
+
 /** Poids normalisés (somme = 1) des actifs sélectionnés. */
 function getWeights() {
   const ids = state.selected;
   if (!ids.length) return {};
+  if (state.mode === 'holdings') {
+    const total = holdingsTotal();
+    const w = {};
+    for (const a of selectedAssets()) {
+      w[a.id] = total > 0 ? pocketValue(a) / total : 1 / ids.length;
+    }
+    return w;
+  }
   let sum = 0;
   const w = {};
   for (const id of ids) {
@@ -85,6 +114,35 @@ function getWeights() {
   if (sum <= 0) for (const id of ids) w[id] = 1 / ids.length;
   else for (const id of ids) w[id] /= sum;
   return w;
+}
+
+/**
+ * Bascule budget ↔ avoirs sans perdre le portefeuille courant : passer en
+ * « avoirs » convertit la répartition en unités au prix du jour ; revenir en
+ * « budget » reprend la valeur totale et les parts calculées.
+ */
+function switchMode(mode) {
+  if (mode === state.mode) return;
+  if (mode === 'holdings') {
+    const w = getWeights();
+    for (const a of selectedAssets()) {
+      const p = priceOf(a);
+      const units = p > 0 ? (state.capital * (w[a.id] || 0)) / p : 0;
+      state.holdings[a.id] = Number(units.toPrecision(6));
+    }
+  } else {
+    const total = holdingsTotal();
+    if (total > 0) {
+      const w = getWeights(); // parts calculées depuis les avoirs
+      for (const a of selectedAssets()) state.weights[a.id] = w[a.id];
+      state.capital = Math.round(total);
+      $('capital').value = String(state.capital);
+    }
+  }
+  state.mode = mode;
+  $('capital').disabled = mode === 'holdings';
+  $('capital').title = mode === 'holdings' ? 'Calculé depuis vos avoirs au prix actuel' : '';
+  render();
 }
 
 /** Fixe le poids d'un actif et redistribue le reste au prorata des autres. */
@@ -126,7 +184,7 @@ function allocations(overrides = {}) {
   return selectedAssets().map((asset) => ({
     asset,
     weight: w[asset.id],
-    capital: state.capital * w[asset.id],
+    capital: currentCapital() * w[asset.id],
     monthly: state.monthly * w[asset.id],
     cagr: scenarioCagr(asset),
     vol: asset.vol,
@@ -153,7 +211,7 @@ function computeAll(years = state.years) {
   return {
     portfolio: { values: deflate(port.total), dividends: deflate(port.dividends) },
     series,
-    invested: deflate(totalInvested({ capital: state.capital, monthly: state.monthly, years })),
+    invested: deflate(totalInvested({ capital: currentCapital(), monthly: state.monthly, years })),
   };
 }
 
@@ -193,8 +251,11 @@ function renderPicker() {
         state.selected.splice(i, 1);
       } else {
         state.selected.push(asset.id);
-        // le nouvel arrivant prend une part égale, les autres se resserrent
-        setWeight(asset.id, 1 / state.selected.length);
+        if (state.mode === 'budget') {
+          // le nouvel arrivant prend une part égale, les autres se resserrent
+          setWeight(asset.id, 1 / state.selected.length);
+        }
+        // en mode avoirs : quantité à saisir (0 par défaut)
       }
       renderPicker();
       render();
@@ -206,22 +267,34 @@ function renderPicker() {
 // ---------------------------------------------------------------- répartition (UI)
 
 // Références vers les éléments du panneau, pour les mettre à jour EN PLACE
-// pendant un glissement : reconstruire le DOM détruirait le curseur en cours
-// de drag et interromprait le geste.
-let allocEls = {}; // { assetId: { slider, pct, amount, seg } }
+// pendant un glissement ou une saisie : reconstruire le DOM détruirait le
+// curseur en cours de drag (ou le champ en cours de frappe).
+let allocEls = {}; // { assetId: { slider?, input?, pct, amount, seg } }
 
-/** Rafraîchit curseurs, %, montants et barre sans reconstruire le DOM. */
-function updateAllocUI(draggingId = null) {
+/** Rafraîchit curseurs/champs, %, montants et barre sans reconstruire le DOM. */
+function updateAllocUI(activeId = null) {
   const w = getWeights();
   for (const [id, els] of Object.entries(allocEls)) {
     if (w[id] === undefined) continue;
-    // on ne touche pas au curseur que l'utilisateur tient, sinon le pouce saute
-    if (id !== draggingId) els.slider.value = String(Math.round(w[id] * 100));
+    // on ne touche pas au contrôle que l'utilisateur manipule
+    if (els.slider && id !== activeId) els.slider.value = String(Math.round(w[id] * 100));
     els.pct.textContent = `${Math.round(w[id] * 100)} %`;
-    els.amount.textContent = fmtCompact(state.capital * w[id]);
-    els.seg.style.width = `${w[id] * 100}%`;
+    els.amount.textContent = fmtCompact(currentCapital() * w[id]);
+    els.seg.style.width = `${Math.max(w[id] * 100, 0)}%`;
     els.seg.title = `${els.name} : ${fmtPct(w[id])}`;
   }
+  updateAllocSub();
+  if (state.mode === 'holdings') $('capital').value = String(Math.round(currentCapital()));
+}
+
+function updateAllocSub() {
+  const assets = selectedAssets();
+  const monthlyNote =
+    state.monthly > 0 ? ` (et ${fmtMoney(state.monthly)}/mois suivant la même répartition)` : '';
+  $('alloc-sub').textContent =
+    state.mode === 'holdings'
+      ? `Vos avoirs valent ${fmtMoney(currentCapital())} au prix actuel${monthlyNote}. Saisissez vos quantités.`
+      : `${fmtMoney(state.capital)} répartis sur ${assets.length} actif${assets.length > 1 ? 's' : ''}${monthlyNote}. Glissez les curseurs pour ajuster.`;
 }
 
 function renderAlloc() {
@@ -233,11 +306,12 @@ function renderAlloc() {
     return;
   }
   card.hidden = false;
+  const holdings = state.mode === 'holdings';
+  $('mode-budget').setAttribute('aria-pressed', String(!holdings));
+  $('mode-holdings').setAttribute('aria-pressed', String(holdings));
+  $('balance').hidden = holdings; // équilibrer n'a pas de sens sur des quantités
   const w = getWeights();
-  $('alloc-sub').textContent =
-    `${fmtMoney(state.capital)} répartis sur ${assets.length} actif${assets.length > 1 ? 's' : ''}` +
-    (state.monthly > 0 ? ` (et ${fmtMoney(state.monthly)}/mois suivant la même répartition)` : '') +
-    '. Glissez les curseurs pour ajuster.';
+  updateAllocSub();
 
   // Barre empilée de la répartition
   const bar = $('alloc-bar');
@@ -253,7 +327,7 @@ function renderAlloc() {
     segs[asset.id] = seg;
   }
 
-  // Une ligne par actif : pastille + nom | curseur | % | montant
+  // Une ligne par actif : pastille + nom | curseur OU quantité | % | montant
   const rows = $('alloc-rows');
   rows.replaceChildren();
   for (const asset of assets) {
@@ -268,18 +342,46 @@ function renderAlloc() {
     dot.className = 'dot';
     name.append(dot, document.createTextNode(asset.name));
 
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.id = `w-${asset.id}`;
-    slider.min = '0';
-    slider.max = '100';
-    slider.step = '1';
-    slider.value = String(Math.round(w[asset.id] * 100));
-    slider.addEventListener('input', () => {
-      setWeight(asset.id, Number(slider.value) / 100);
-      updateAllocUI(asset.id); // en place : le drag continue
-      scheduleResults(); // graphique & co, coalescés sur une frame
-    });
+    let control;
+    const els = { seg: segs[asset.id], name: asset.name };
+    if (holdings) {
+      // Saisie directe de la quantité détenue (« j'ai 0,5 BTC »)
+      control = document.createElement('span');
+      control.className = 'a-units';
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = `w-${asset.id}`;
+      input.min = '0';
+      input.step = 'any';
+      input.placeholder = '0';
+      const units = state.holdings[asset.id] || 0;
+      if (units > 0) input.value = String(units);
+      input.addEventListener('input', () => {
+        state.holdings[asset.id] = Math.max(0, Number(input.value) || 0);
+        updateAllocUI(asset.id); // en place : la frappe continue
+        scheduleResults();
+      });
+      const ticker = document.createElement('span');
+      ticker.className = 'ticker';
+      ticker.textContent = `${asset.ticker} × ${fmtMoney(priceOf(asset))}`;
+      control.append(input, ticker);
+      els.input = input;
+    } else {
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.id = `w-${asset.id}`;
+      slider.min = '0';
+      slider.max = '100';
+      slider.step = '1';
+      slider.value = String(Math.round(w[asset.id] * 100));
+      slider.addEventListener('input', () => {
+        setWeight(asset.id, Number(slider.value) / 100);
+        updateAllocUI(asset.id); // en place : le drag continue
+        scheduleResults(); // graphique & co, coalescés sur une frame
+      });
+      control = slider;
+      els.slider = slider;
+    }
 
     const pct = document.createElement('span');
     pct.className = 'a-pct';
@@ -287,11 +389,11 @@ function renderAlloc() {
 
     const amount = document.createElement('span');
     amount.className = 'a-amount';
-    amount.textContent = fmtCompact(state.capital * w[asset.id]);
+    amount.textContent = fmtCompact(currentCapital() * w[asset.id]);
 
-    row.append(name, slider, pct, amount);
+    row.append(name, control, pct, amount);
     rows.append(row);
-    allocEls[asset.id] = { slider, pct, amount, seg: segs[asset.id], name: asset.name };
+    allocEls[asset.id] = { ...els, pct, amount };
   }
 }
 
@@ -302,7 +404,7 @@ function renderTiles() {
   box.replaceChildren();
   if (!state.selected.length) return;
   const { portfolio } = computeAll(20);
-  const invested = deflate(totalInvested({ capital: state.capital, monthly: state.monthly, years: 20 }));
+  const invested = deflate(totalInvested({ capital: currentCapital(), monthly: state.monthly, years: 20 }));
   for (const y of MILESTONES) {
     const v = portfolio.values[y];
     const inv = invested[y];
@@ -523,7 +625,7 @@ function renderChart() {
 
   // Sous-titre
   const parts = [
-    `Capital initial ${fmtMoney(state.capital)}`,
+    `Capital ${state.mode === 'holdings' ? 'actuel (avoirs valorisés)' : 'initial'} ${fmtMoney(currentCapital())}`,
     state.monthly > 0 ? `versement ${fmtMoney(state.monthly)}/mois` : null,
     `scénario « ${$('scenario').selectedOptions[0].textContent} »`,
     state.real ? `en ${sym()} constants (inflation 2,5 %/an déduite)` : null,
@@ -697,7 +799,7 @@ function renderAssetCards() {
   const w = getWeights();
   for (const asset of selectedAssets()) {
     const p = PRICES[asset.id];
-    const allocated = state.capital * (w[asset.id] || 0);
+    const allocated = currentCapital() * (w[asset.id] || 0);
     const card = document.createElement('div');
     card.className = 'asset-card';
 
@@ -782,7 +884,7 @@ function renderCompound() {
 
   const w = getWeights();
   const payersShare = payers.reduce((s, a) => s + (w[a.id] || 0), 0);
-  const payersCapital = state.capital * payersShare;
+  const payersCapital = currentCapital() * payersShare;
   const gain = accTotal[years] - distTotal[years];
   const pct = distTotal[years] > 0 ? gain / distTotal[years] : 0;
   $('compound-text').textContent =
@@ -904,6 +1006,8 @@ function bindControls() {
     renderAlloc();
     render();
   });
+  $('mode-budget').addEventListener('click', () => switchMode('budget'));
+  $('mode-holdings').addEventListener('click', () => switchMode('holdings'));
 }
 
 async function loadPrices() {
@@ -924,8 +1028,8 @@ async function init() {
   bindControls();
   renderPicker();
   render();
-  await loadPrices(); // les prix arrivent ensuite, on rafraîchit les cartes
-  renderAssetCards();
+  await loadPrices(); // les prix arrivent ensuite : re-rendu complet, car en
+  render(); // mode « avoirs » les valorisations en dépendent directement
 }
 
 init();
