@@ -17,7 +17,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:static": "node scripts/build-static.mjs"
   },
   "engines": {
     "node": ">=18"
