@@ -36,7 +36,8 @@ npm start        # ❄️ http://localhost:3000
 npm test         # tests du moteur de projection (node:test)
 ```
 
-Aucune clé d'API nécessaire. Node.js ≥ 18.
+Aucune clé d'API nécessaire. Node.js ≥ 18. Pour mettre en ligne (Hostinger VPS,
+hPanel…) : voir **[DEPLOY.md](DEPLOY.md)**.
 
 ## Comment sont calculées les projections ?
 
