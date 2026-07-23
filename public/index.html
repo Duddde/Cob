@@ -68,9 +68,21 @@
       </div>
     </section>
 
-    <div class="asset-picker" id="asset-picker" role="group" aria-label="Actifs à comparer"></div>
+    <div class="asset-picker" id="asset-picker" role="group" aria-label="Actifs du portefeuille"></div>
 
-    <section class="tiles" id="tiles" aria-label="Valeurs projetées à 5, 10, 15 et 20 ans"></section>
+    <section class="card alloc" id="alloc" hidden>
+      <div class="alloc-head">
+        <div>
+          <h2>Répartition du capital</h2>
+          <p class="sub" id="alloc-sub"></p>
+        </div>
+        <button type="button" class="btn" id="balance">Équilibrer</button>
+      </div>
+      <div class="alloc-bar" id="alloc-bar" aria-hidden="true"></div>
+      <div class="alloc-rows" id="alloc-rows"></div>
+    </section>
+
+    <section class="tiles" id="tiles" aria-label="Valeur projetée du portefeuille à 5, 10, 15 et 20 ans"></section>
 
     <section class="card compound" id="compound" hidden>
       <h2>💡 Effet des intérêts composés</h2>
@@ -79,7 +91,7 @@
     </section>
 
     <section class="card">
-      <h2 id="chart-title">Projection du capital</h2>
+      <h2 id="chart-title">Projection du portefeuille</h2>
       <p class="sub" id="chart-sub"></p>
       <div class="chart-box" id="chart-box">
         <svg id="chart" role="img" aria-labelledby="chart-title"></svg>
@@ -92,7 +104,7 @@
 
     <section class="card">
       <h2>Vue tableau</h2>
-      <p class="sub">Valeur projetée par actif, année par année (scénario sélectionné). Les jalons 5 / 10 / 15 / 20 ans sont en gras.</p>
+      <p class="sub">Portefeuille et poches par actif, année par année (scénario sélectionné). Les jalons 5 / 10 / 15 / 20 ans sont en gras.</p>
       <div class="table-scroll">
         <table class="results" id="results-table"></table>
       </div>
@@ -102,11 +114,14 @@
       <h2>Méthodologie & sources</h2>
       <p>
         Les projections utilisent la capitalisation composée à partir de rendements géométriques
-        annualisés (CAGR) observés sur les historiques de prix. La bande d'incertitude de l'actif
-        en vedette est estimée par simulation Monte Carlo (2&nbsp;000 trajectoires, rendements
-        mensuels log-normaux calés sur le CAGR et la volatilité historiques) : elle couvre
-        80&nbsp;% des trajectoires simulées (percentiles 10 à 90). Hypothèse d'inflation pour le
-        mode «&nbsp;pouvoir d'achat constant&nbsp;» : 2,5&nbsp;%/an.
+        annualisés (CAGR) observés sur les historiques de prix. Le capital est réparti entre les
+        poches selon vos pourcentages (les versements mensuels suivent la même répartition). La
+        bande d'incertitude porte sur le <strong>portefeuille</strong> : chaque poche est simulée
+        par Monte Carlo (rendements mensuels log-normaux calés sur son CAGR et sa volatilité
+        historiques), les trajectoires sont sommées poche par poche, et la bande couvre 80&nbsp;%
+        des futurs simulés (percentiles 10 à 90). Hypothèse simplificatrice : poches simulées
+        indépendamment — les corrélations réelles entre actifs élargiraient la fourchette.
+        Inflation du mode «&nbsp;pouvoir d'achat constant&nbsp;» : 2,5&nbsp;%/an.
       </p>
       <p>
         Chiffres, sources spécialisées et papiers de recherche utilisés :

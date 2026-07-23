@@ -6,6 +6,8 @@ import {
   projectDeterministic,
   projectPercentiles,
   projectWithDividends,
+  projectPortfolio,
+  projectPortfolioPercentiles,
   totalInvested,
   toRealTerms,
   mulberry32,
@@ -135,4 +137,64 @@ test('Monte Carlo distribuant : percentiles ordonnés et médiane ≈ détermini
     assert.ok(mc.p10[y] <= mc.p50[y] && mc.p50[y] <= mc.p90[y]);
   }
   assert.ok(Math.abs(mc.p50[15] - det.total[15]) / det.total[15] < 0.05);
+});
+
+test('portefeuille : la somme des poches égale la projection pondérée', () => {
+  const years = 15;
+  const a = { capital: 6000, monthly: 60, cagr: 0.104, dividendYield: 0.012, reinvest: true };
+  const b = { capital: 4000, monthly: 40, cagr: 0.15, reinvest: true };
+  const port = projectPortfolio({ allocations: [a, b], years });
+  const ra = projectWithDividends({ ...a, years });
+  const rb = projectWithDividends({ ...b, years });
+  for (let y = 0; y <= years; y++) {
+    assert.ok(Math.abs(port.total[y] - (ra.total[y] + rb.total[y])) < 1e-9);
+  }
+});
+
+test('portefeuille mono-poche = projection de la poche', () => {
+  const a = { capital: 10000, cagr: 0.1, reinvest: true };
+  const port = projectPortfolio({ allocations: [a], years: 10 });
+  const r = projectWithDividends({ ...a, years: 10 });
+  assert.deepEqual(port.total, r.total);
+});
+
+test('Monte Carlo portefeuille : percentiles ordonnés, reproductibles, médiane ≈ déterministe', () => {
+  const volatile = [
+    { capital: 5000, cagr: 0.104, vol: 0.16, reinvest: true },
+    { capital: 5000, cagr: 0.15, vol: 0.6, reinvest: true },
+  ];
+  const years = 15;
+  const m1 = projectPortfolioPercentiles({ allocations: volatile, years, percentiles: [10, 50, 90], seed: 7 });
+  const m2 = projectPortfolioPercentiles({ allocations: volatile, years, percentiles: [10, 50, 90], seed: 7 });
+  assert.deepEqual(m1, m2);
+  for (let y = 0; y <= years; y++) {
+    assert.ok(m1.p10[y] <= m1.p50[y] && m1.p50[y] <= m1.p90[y]);
+  }
+  // La médiane d'une somme de log-normales n'est pas la somme des médianes,
+  // et l'écart grandit avec la volatilité : on ne vérifie la proximité avec
+  // le déterministe que sur des poches modérées (type ETF actions).
+  const calm = [
+    { capital: 5000, cagr: 0.104, vol: 0.16, reinvest: true },
+    { capital: 5000, cagr: 0.089, vol: 0.15, reinvest: true },
+  ];
+  const mc = projectPortfolioPercentiles({ allocations: calm, years, percentiles: [50], seed: 7 });
+  const det = projectPortfolio({ allocations: calm, years });
+  assert.ok(Math.abs(mc.p50[years] - det.total[years]) / det.total[years] < 0.1);
+});
+
+test('diversification : la bande relative du portefeuille 50/50 est plus étroite', () => {
+  const years = 10;
+  const mono = projectPortfolioPercentiles({
+    allocations: [{ capital: 10000, cagr: 0.1, vol: 0.3, reinvest: true }],
+    years, percentiles: [10, 90],
+  });
+  const duo = projectPortfolioPercentiles({
+    allocations: [
+      { capital: 5000, cagr: 0.1, vol: 0.3, reinvest: true },
+      { capital: 5000, cagr: 0.1, vol: 0.3, reinvest: true },
+    ],
+    years, percentiles: [10, 90],
+  });
+  const spread = (r) => r.p90[years] / r.p10[years];
+  assert.ok(spread(duo) < spread(mono), 'deux poches indépendantes doivent resserrer la fourchette');
 });
