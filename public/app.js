@@ -205,9 +205,29 @@ function renderPicker() {
 
 // ---------------------------------------------------------------- répartition (UI)
 
+// Références vers les éléments du panneau, pour les mettre à jour EN PLACE
+// pendant un glissement : reconstruire le DOM détruirait le curseur en cours
+// de drag et interromprait le geste.
+let allocEls = {}; // { assetId: { slider, pct, amount, seg } }
+
+/** Rafraîchit curseurs, %, montants et barre sans reconstruire le DOM. */
+function updateAllocUI(draggingId = null) {
+  const w = getWeights();
+  for (const [id, els] of Object.entries(allocEls)) {
+    if (w[id] === undefined) continue;
+    // on ne touche pas au curseur que l'utilisateur tient, sinon le pouce saute
+    if (id !== draggingId) els.slider.value = String(Math.round(w[id] * 100));
+    els.pct.textContent = `${Math.round(w[id] * 100)} %`;
+    els.amount.textContent = fmtCompact(state.capital * w[id]);
+    els.seg.style.width = `${w[id] * 100}%`;
+    els.seg.title = `${els.name} : ${fmtPct(w[id])}`;
+  }
+}
+
 function renderAlloc() {
   const card = $('alloc');
   const assets = selectedAssets();
+  allocEls = {};
   if (!assets.length) {
     card.hidden = true;
     return;
@@ -222,6 +242,7 @@ function renderAlloc() {
   // Barre empilée de la répartition
   const bar = $('alloc-bar');
   bar.replaceChildren();
+  const segs = {};
   for (const asset of assets) {
     const seg = document.createElement('div');
     seg.className = 'seg';
@@ -229,6 +250,7 @@ function renderAlloc() {
     seg.style.background = seriesColor(asset.color);
     seg.title = `${asset.name} : ${fmtPct(w[asset.id])}`;
     bar.append(seg);
+    segs[asset.id] = seg;
   }
 
   // Une ligne par actif : pastille + nom | curseur | % | montant
@@ -255,8 +277,8 @@ function renderAlloc() {
     slider.value = String(Math.round(w[asset.id] * 100));
     slider.addEventListener('input', () => {
       setWeight(asset.id, Number(slider.value) / 100);
-      renderAlloc(); // met à jour % et barre pendant le glissement
-      render();
+      updateAllocUI(asset.id); // en place : le drag continue
+      scheduleResults(); // graphique & co, coalescés sur une frame
     });
 
     const pct = document.createElement('span');
@@ -269,6 +291,7 @@ function renderAlloc() {
 
     row.append(name, slider, pct, amount);
     rows.append(row);
+    allocEls[asset.id] = { slider, pct, amount, seg: segs[asset.id], name: asset.name };
   }
 }
 
@@ -802,14 +825,31 @@ function renderCompound() {
 
 // ---------------------------------------------------------------- rendu global
 
-function render() {
-  renderAlloc();
+/** Tout ce qui dépend des résultats (mais pas le panneau de répartition). */
+function renderResults() {
   renderTiles();
   renderCompound();
   renderChart();
   renderLegend();
   renderTable();
   renderAssetCards();
+}
+
+// Pendant un glissement de curseur, on coalesce les recalculs (Monte Carlo
+// compris) sur une frame d'animation pour rester fluide.
+let rafPending = false;
+function scheduleResults() {
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    renderResults();
+  });
+}
+
+function render() {
+  renderAlloc();
+  renderResults();
 }
 
 // ---------------------------------------------------------------- init
