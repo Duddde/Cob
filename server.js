@@ -1,5 +1,5 @@
 /**
- * Capitaine — serveur Express.
+ * SnowBall — serveur Express.
  *
  *  - Sert l'interface web (public/).
  *  - GET /api/assets            → catalogue des actifs + hypothèses.
@@ -26,7 +26,7 @@ async function fetchJson(url, options = {}) {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'capitaine/0.1 (open source portfolio projector)' },
+      headers: { 'User-Agent': 'snowball/0.1 (open source portfolio projector)' },
       ...options,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -134,5 +134,5 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/lib', express.static(path.join(__dirname, 'lib')));
 
 app.listen(PORT, () => {
-  console.log(`⚓ Capitaine à la barre sur http://localhost:${PORT}`);
+  console.log(`❄️ SnowBall roule sur http://localhost:${PORT}`);
 });

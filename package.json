@@ -1,7 +1,7 @@
 {
-  "name": "capitaine",
+  "name": "snowball-invest",
   "version": "0.1.0",
-  "description": "Visualisez le cap de votre capital : projections d'investissement multi-actifs (crypto, ETF, actions) basées sur les performances historiques.",
+  "description": "Laissez vos intérêts faire boule de neige : projections d'investissement multi-actifs (crypto, ETF, actions) basées sur les performances historiques.",
   "keywords": [
     "investissement",
     "projection",

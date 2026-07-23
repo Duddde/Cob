@@ -1,4 +1,4 @@
-/* Capitaine — logique de l'interface.
+/* SnowBall — logique de l'interface.
    Le moteur de calcul est partagé avec le serveur et les tests : /lib/projection.js */
 
 import {

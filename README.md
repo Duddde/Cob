@@ -1,8 +1,8 @@
-# ⚓ Capitaine
+# ❄️ SnowBall
 
-> Où votre capital peut-il vous mener dans 5, 10, 15, 20 ans ?
+> Laissez vos intérêts faire boule de neige : visualisez votre capital dans 5, 10, 15, 20 ans.
 
-**Capitaine** est une interface web open source (Node.js) pour visualiser ce que pourrait
+**SnowBall** est une interface web open source (Node.js) pour visualiser ce que pourrait
 devenir un capital investi aujourd'hui dans une crypto, un ETF ou une action, en se basant
 sur les **performances historiques documentées** — et en montrant honnêtement l'incertitude
 qui les entoure.
@@ -30,7 +30,7 @@ qui les entoure.
 
 ```bash
 npm install
-npm start        # ⚓ http://localhost:3000
+npm start        # ❄️ http://localhost:3000
 npm test         # tests du moteur de projection (node:test)
 ```
 
@@ -59,7 +59,7 @@ documentés dans **[docs/RESEARCH.md](docs/RESEARCH.md)**.
 résultat central de la littérature citée (Persistence Scorecard de S&P, retour à la
 moyenne chez Bogle). Le CAGR de Bitcoin sur 10 ans est de ~59 %/an, mais de ~15 %/an
 seulement sur 5 ans, et les projections institutionnelles sérieuses retiennent 3 à 15 %/an
-pour la prochaine décennie. Capitaine est un outil pédagogique de visualisation d'ordres
+pour la prochaine décennie. SnowBall est un outil pédagogique de visualisation d'ordres
 de grandeur, pas un conseil en investissement.
 
 ## Contribuer

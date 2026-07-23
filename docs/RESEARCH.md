@@ -1,7 +1,7 @@
 # Recherche : performances historiques & littérature
 
 Ce document rassemble les données et références qui fondent les hypothèses de rendement
-de Capitaine (`lib/assets.js`). Données collectées en **juillet 2026** ; les CAGR sont des
+de SnowBall (`lib/assets.js`). Données collectées en **juillet 2026** ; les CAGR sont des
 rendements **géométriques annualisés nominaux**, dividendes réinvestis quand applicable.
 Certains sites (curvo.eu, slickcharts, averageannualreturn…) bloquent la consultation
 automatisée : leurs chiffres proviennent alors d'extraits de recherche, recoupés quand
@@ -124,7 +124,7 @@ le frottement fiscal, qui pénalise en pratique davantage encore les fonds distr
 ## 2. « Le BTC fait en moyenne +50 %/an » — vrai ou faux ?
 
 - **Sur 10 ans : vrai, et même dépassé** (~59 %/an). C'est le scénario « Historique » de
-  Capitaine — utile pour visualiser la question, à condition de voir ce qu'elle suppose.
+  SnowBall — utile pour visualiser la question, à condition de voir ce qu'elle suppose.
 - **Sur 5 ans : faux** (~15 %/an). Les rendements du BTC **décroissent structurellement**
   à mesure que l'actif mûrit : multiples de cycle en chute (×100+ en 2013, ×30 en 2017,
   ×8 en 2021, ×3-4 en 2025), modèles en loi de puissance en décélération continue,
@@ -153,7 +153,7 @@ le frottement fiscal, qui pénalise en pratique davantage encore les fonds distr
 - **Jacquier, E., Kane, A. & Marcus, A. (2003).** « Geometric or Arithmetic Mean:
   A Reconsideration ». *Financial Analysts Journal*, 59(6), 46-53. Composer la moyenne
   arithmétique historique biaise les projections à la hausse (« volatility drag »,
-  g ≈ μ − σ²/2) ; sur 40 ans l'écart peut dépasser un facteur 2. C'est pourquoi Capitaine
+  g ≈ μ − σ²/2) ; sur 40 ans l'écart peut dépasser un facteur 2. C'est pourquoi SnowBall
   projette sur le CAGR **géométrique** et cale la médiane Monte Carlo dessus.
   [Tandfonline](https://www.tandfonline.com/doi/abs/10.2469/faj.v59.n6.2574) ·
   [SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=489522)
