@@ -138,6 +138,17 @@ header.site .tagline { color: var(--text-secondary); }
 .tile .delta.up { color: var(--good); }
 .tile .delta.down { color: var(--bad); }
 
+/* ---- Effet des intérêts composés ---- */
+.compound-bars { display: grid; gap: 10px; margin-top: 14px; }
+.cbar { display: grid; grid-template-columns: 110px 1fr 110px; align-items: center; gap: 12px; font-size: 13px; }
+.cbar .name { color: var(--text-secondary); }
+.cbar .track { display: flex; gap: 2px; height: 20px; }
+.cbar .seg { height: 100%; min-width: 2px; }
+.cbar .seg:first-child { border-radius: 2px 0 0 2px; }
+.cbar .seg:last-child { border-radius: 0 4px 4px 0; }
+.cbar .val { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.cbar-note { color: var(--text-muted); font-size: 12px; }
+
 /* ---- Carte graphique ---- */
 .card {
   background: var(--surface-1);

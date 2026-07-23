@@ -49,6 +49,13 @@
         </select>
       </div>
       <div class="control">
+        <label for="divmode">Dividendes des ETF</label>
+        <select id="divmode">
+          <option value="acc" selected>Capitalisant (réinvestis)</option>
+          <option value="dist">Distribuant (encaissés)</option>
+        </select>
+      </div>
+      <div class="control">
         <label for="currency">Devise</label>
         <select id="currency">
           <option value="eur" selected>€ EUR</option>
@@ -64,6 +71,12 @@
     <div class="asset-picker" id="asset-picker" role="group" aria-label="Actifs à comparer"></div>
 
     <section class="tiles" id="tiles" aria-label="Valeurs projetées à 5, 10, 15 et 20 ans"></section>
+
+    <section class="card compound" id="compound" hidden>
+      <h2>💡 Effet des intérêts composés</h2>
+      <p class="sub" id="compound-text"></p>
+      <div class="compound-bars" id="compound-bars" role="img" aria-label="Comparaison capitalisant / distribuant"></div>
+    </section>
 
     <section class="card">
       <h2 id="chart-title">Projection du capital</h2>

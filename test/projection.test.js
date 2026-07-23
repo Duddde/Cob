@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   monthlyRate,
+  priceOnlyCagr,
   projectDeterministic,
   projectPercentiles,
+  projectWithDividends,
   totalInvested,
   toRealTerms,
   mulberry32,
@@ -75,4 +77,62 @@ test('Monte Carlo : la volatilité élargit la bande', () => {
   const wide = projectPercentiles({ ...base, vol: 0.6 });
   const spread = (r) => r.p90[10] / r.p10[10];
   assert.ok(spread(wide) > spread(narrow));
+});
+
+test('priceOnlyCagr : (1+prix) × (1+dividende) = 1+total', () => {
+  const price = priceOnlyCagr(0.104, 0.012);
+  assert.ok(Math.abs((1 + price) * 1.012 - 1.104) < 1e-12);
+});
+
+test('capitalisant (reinvest=true) = projection déterministe au CAGR total', () => {
+  const acc = projectWithDividends({
+    capital: 10000, monthly: 100, cagr: 0.104, dividendYield: 0.012, years: 15, reinvest: true,
+  });
+  const det = projectDeterministic({ capital: 10000, monthly: 100, cagr: 0.104, years: 15 });
+  assert.deepEqual(acc.total, det);
+  assert.ok(acc.dividends.every((d) => d === 0));
+});
+
+test('sans dividende, distribuant = capitalisant', () => {
+  const params = { capital: 10000, cagr: 0.1, dividendYield: 0, years: 10 };
+  const acc = projectWithDividends({ ...params, reinvest: true });
+  const dist = projectWithDividends({ ...params, reinvest: false });
+  assert.deepEqual(dist.total, acc.total);
+});
+
+test('distribuant : total = investi + dividendes, et dividendes croissants', () => {
+  const dist = projectWithDividends({
+    capital: 10000, cagr: 0.104, dividendYield: 0.012, years: 20, reinvest: false,
+  });
+  for (let y = 0; y <= 20; y++) {
+    assert.ok(Math.abs(dist.total[y] - (dist.invested[y] + dist.dividends[y])) < 1e-9);
+    if (y > 0) assert.ok(dist.dividends[y] > dist.dividends[y - 1]);
+  }
+});
+
+test('effet des intérêts composés : capitalisant > distribuant, écart croissant', () => {
+  const params = { capital: 10000, cagr: 0.104, dividendYield: 0.012, years: 20 };
+  const acc = projectWithDividends({ ...params, reinvest: true });
+  const dist = projectWithDividends({ ...params, reinvest: false });
+  let prevGap = 0;
+  for (let y = 1; y <= 20; y++) {
+    const gap = acc.total[y] - dist.total[y];
+    assert.ok(gap > prevGap, `l'écart doit croître (année ${y})`);
+    prevGap = gap;
+  }
+  // Ordre de grandeur : à 10,4 %/an dont 1,2 % de dividendes sur 20 ans,
+  // le réinvestissement pèse plusieurs points de pourcentage du total.
+  assert.ok(acc.total[20] / dist.total[20] > 1.02);
+});
+
+test('Monte Carlo distribuant : percentiles ordonnés et médiane ≈ déterministe', () => {
+  const params = {
+    capital: 10000, cagr: 0.104, vol: 0.16, dividendYield: 0.012, years: 15, reinvest: false,
+  };
+  const mc = projectPercentiles({ ...params, percentiles: [10, 50, 90] });
+  const det = projectWithDividends({ ...params });
+  for (let y = 0; y <= 15; y++) {
+    assert.ok(mc.p10[y] <= mc.p50[y] && mc.p50[y] <= mc.p90[y]);
+  }
+  assert.ok(Math.abs(mc.p50[15] - det.total[15]) / det.total[15] < 0.05);
 });

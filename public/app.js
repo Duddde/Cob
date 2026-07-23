@@ -4,6 +4,7 @@
 import {
   projectDeterministic,
   projectPercentiles,
+  projectWithDividends,
   totalInvested,
   toRealTerms,
 } from '/lib/projection.js';
@@ -18,6 +19,7 @@ const state = {
   currency: 'eur',
   real: false,
   log: true, // avec des CAGR crypto à 2 chiffres, l'échelle linéaire écrase tout le reste
+  divMode: 'acc', // 'acc' = ETF capitalisants (dividendes réinvestis), 'dist' = distribuants
   selected: ['btc', 'sp500', 'msciworld'],
   focus: 'btc', // actif dont on affiche la bande d'incertitude et les tuiles
 };
@@ -65,18 +67,42 @@ function deflate(values) {
   return state.real ? toRealTerms(values, INFLATION) : values;
 }
 
-/** Séries projetées pour l'affichage : [{asset, values}], + versements cumulés. */
+/** L'actif verse-t-il ses dividendes en cash dans le mode courant ? */
+function isDistributing(asset) {
+  return state.divMode === 'dist' && (asset.dividendYield || 0) > 0;
+}
+
+/**
+ * Projection d'un actif dans le mode courant. En mode distribuant, `values`
+ * est le patrimoine total (part investie + dividendes encaissés, qui ne
+ * composent plus) ; sinon tout est réinvesti et compose.
+ */
+function projectAsset(asset, years) {
+  const { capital, monthly } = state;
+  const dist = isDistributing(asset);
+  const r = projectWithDividends({
+    capital,
+    monthly,
+    cagr: scenarioCagr(asset),
+    dividendYield: asset.dividendYield || 0,
+    years,
+    reinvest: !dist,
+  });
+  return {
+    dist,
+    values: deflate(r.total),
+    invested: deflate(r.invested),
+    dividends: deflate(r.dividends),
+  };
+}
+
+/** Séries projetées pour l'affichage : [{asset, values, dist}], + versements cumulés. */
 function computeSeries() {
   const { capital, monthly, years } = state;
   const series = state.selected
     .map((id) => CATALOG.find((a) => a.id === id))
     .filter(Boolean)
-    .map((asset) => ({
-      asset,
-      values: deflate(
-        projectDeterministic({ capital, monthly, cagr: scenarioCagr(asset), years })
-      ),
-    }));
+    .map((asset) => ({ asset, ...projectAsset(asset, years) }));
   const invested = deflate(totalInvested({ capital, monthly, years }));
   return { series, invested };
 }
@@ -92,6 +118,8 @@ function computeBand() {
     cagr: scenarioCagr(asset),
     vol: asset.vol,
     years,
+    dividendYield: asset.dividendYield || 0,
+    reinvest: !isDistributing(asset),
     percentiles: [10, 90],
   });
   return { asset, p10: deflate(pct.p10), p90: deflate(pct.p90) };
@@ -132,9 +160,8 @@ function renderTiles() {
   const asset = CATALOG.find((a) => a.id === state.focus);
   if (!asset) return;
   const { capital, monthly } = state;
-  const values = deflate(
-    projectDeterministic({ capital, monthly, cagr: scenarioCagr(asset), years: 20 })
-  );
+  const proj = projectAsset(asset, 20);
+  const values = proj.values;
   const invested = deflate(totalInvested({ capital, monthly, years: 20 }));
   for (const y of MILESTONES) {
     const v = values[y];
@@ -150,7 +177,8 @@ function renderTiles() {
     const delta = document.createElement('div');
     const mult = inv > 0 ? v / inv : 0;
     delta.className = 'delta ' + (v >= inv ? 'up' : 'down');
-    delta.textContent = `× ${nf1.format(mult)} vs ${fmtCompact(inv)} versés`;
+    delta.textContent = `× ${nf1.format(mult)} vs ${fmtCompact(inv)} versés` +
+      (proj.dist ? ` · dont ${fmtCompact(proj.dividends[y])} de dividendes` : '');
     tile.append(label, value, delta);
     box.append(tile);
   }
@@ -338,6 +366,9 @@ function renderChart() {
     state.monthly > 0 ? `versement ${fmtMoney(state.monthly)}/mois` : null,
     `scénario « ${$('scenario').selectedOptions[0].textContent} »`,
     state.real ? `en ${sym()} constants (inflation 2,5 %/an déduite)` : null,
+      series.some((sr) => sr.dist)
+      ? 'ETF distribuants : la ligne cumule part investie et dividendes encaissés'
+      : null,
   ].filter(Boolean);
   $('chart-sub').textContent =
     parts.join(' · ') +
@@ -524,6 +555,12 @@ function renderAssetCards() {
         rows.push(['Unités pour ' + fmtCompact(state.capital), fmtUnits(units)]);
       }
     }
+    if ((asset.dividendYield || 0) > 0) {
+      rows.push([
+        'Dividende',
+        `≈ ${fmtPct(asset.dividendYield)}/an ${isDistributing(asset) ? '(encaissé)' : '(réinvesti)'}`,
+      ]);
+    }
     rows.push(['Rendement retenu', `${fmtPct(scenarioCagr(asset))}/an`]);
     rows.push(['Volatilité historique', `≈ ${fmtPct(asset.vol)}/an`]);
     for (const [label, value] of rows) {
@@ -553,10 +590,95 @@ function fmtUnits(units) {
   return new Intl.NumberFormat('fr-FR', { maximumSignificantDigits: 4 }).format(units);
 }
 
+// ------------------------------------------ effet des intérêts composés
+
+/**
+ * Compare, pour un actif à dividendes, la version capitalisante (dividendes
+ * réinvestis → ils composent) et la version distribuante (dividendes
+ * encaissés → ils ne composent plus). L'écart chiffré EST l'effet des
+ * intérêts composés. Affiché pour l'actif en vedette s'il verse un
+ * dividende, sinon pour le premier actif sélectionné qui en verse un.
+ */
+function renderCompound() {
+  const card = $('compound');
+  const candidates = [state.focus, ...state.selected]
+    .map((id) => CATALOG.find((a) => a.id === id))
+    .filter((a) => a && (a.dividendYield || 0) > 0);
+  const asset = candidates[0];
+  if (!asset) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+
+  const { capital, monthly, years } = state;
+  const base = { capital, monthly, cagr: scenarioCagr(asset), dividendYield: asset.dividendYield, years };
+  const acc = deflate(projectWithDividends({ ...base, reinvest: true }).total);
+  const distR = projectWithDividends({ ...base, reinvest: false });
+  const dist = deflate(distR.total);
+  const distInvested = deflate(distR.invested);
+  const distCash = deflate(distR.dividends);
+
+  const gain = acc[years] - dist[years];
+  const pct = dist[years] > 0 ? gain / dist[years] : 0;
+  $('compound-text').textContent =
+    `${asset.name}, ${fmtCompact(capital)} investis` +
+    (monthly > 0 ? ` + ${fmtMoney(monthly)}/mois` : '') +
+    ` sur ${years} ans à ${fmtPct(scenarioCagr(asset))}/an (dont ≈ ${fmtPct(asset.dividendYield)} de dividendes) : ` +
+    `la version capitalisante atteint ${fmtCompact(acc[years])}, la distribuante ${fmtCompact(dist[years])} ` +
+    `(${fmtCompact(distInvested[years])} investis + ${fmtCompact(distCash[years])} de dividendes encaissés qui ne composent plus). ` +
+    `Réinvestir les dividendes rapporte ${gain >= 0 ? '+' : ''}${fmtCompact(gain)} (${gain >= 0 ? '+' : ''}${fmtPct(pct)}) : ` +
+    `c'est l'effet boule de neige des intérêts composés — avant même le frottement fiscal qui pénalise en plus les dividendes versés.`;
+
+  // Mini-comparaison en barres : capitalisant (1 segment) vs distribuant
+  // (2 segments : part investie + dividendes, séparés par un espace surface).
+  const bars = $('compound-bars');
+  bars.replaceChildren();
+  const max = Math.max(acc[years], dist[years], 1);
+  const color = seriesColor(asset.color);
+  const mkBar = (name, segs, total) => {
+    const row = document.createElement('div');
+    row.className = 'cbar';
+    const label = document.createElement('span');
+    label.className = 'name';
+    label.textContent = name;
+    const track = document.createElement('div');
+    track.className = 'track';
+    for (const seg of segs) {
+      const el = document.createElement('div');
+      el.className = 'seg';
+      el.style.width = `${(seg.v / max) * 100}%`;
+      el.style.background = color;
+      if (seg.faded) el.style.opacity = 0.35;
+      el.title = `${seg.name} : ${fmtCompact(seg.v)}`;
+      track.append(el);
+    }
+    const val = document.createElement('span');
+    val.className = 'val';
+    val.textContent = fmtCompact(total);
+    row.append(label, track, val);
+    bars.append(row);
+  };
+  mkBar('Capitalisant', [{ name: 'Capital (dividendes réinvestis)', v: acc[years] }], acc[years]);
+  mkBar(
+    'Distribuant',
+    [
+      { name: 'Part investie', v: distInvested[years] },
+      { name: 'Dividendes encaissés', v: distCash[years], faded: true },
+    ],
+    dist[years]
+  );
+  const note = document.createElement('div');
+  note.className = 'cbar-note';
+  note.textContent = 'Segment estompé : dividendes encaissés en cash (ils ne composent plus). Survolez les segments pour le détail.';
+  bars.append(note);
+}
+
 // ---------------------------------------------------------------- rendu global
 
 function render() {
   renderTiles();
+  renderCompound();
   renderChart();
   renderLegend();
   renderTable();
@@ -580,6 +702,10 @@ function bindControls() {
   });
   $('scenario').addEventListener('change', (e) => {
     state.scenario = e.target.value;
+    render();
+  });
+  $('divmode').addEventListener('change', (e) => {
+    state.divMode = e.target.value;
     render();
   });
   $('currency').addEventListener('change', async (e) => {

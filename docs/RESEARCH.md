@@ -91,6 +91,28 @@ c'était possible.
 - Sources : [fact sheet iShares AGG (PDF)](https://www.ishares.com/us/literature/fact-sheet/agg-ishares-core-u-s-aggregate-bond-etf-fund-fact-sheet-en-us.pdf),
   [Morningstar](https://www.morningstar.com/etfs/arcx/agg/performance).
 
+### Rendements du dividende (pour le mode capitalisant / distribuant)
+
+Valeurs approximatives mi-2026, issues des factsheets émetteurs et agrégateurs
+(SSGA/SPY, iShares/IWDA et AGG, Invesco/QQQ, justETF, Morningstar) :
+
+| ETF | Rendement du dividende ≈ |
+|---|---|
+| S&P 500 (SPY) | 1,2 %/an |
+| MSCI World (IWDA) | 1,7 %/an |
+| Nasdaq-100 (QQQ) | 0,6 %/an |
+| Obligations US (AGG) | 4 %/an *(coupons — l'essentiel du rendement obligataire)* |
+
+Décomposition utilisée : (1 + rendement total) = (1 + rendement prix) × (1 + dividende).
+En version **capitalisante**, le dividende est réinvesti et compose avec le prix (le CAGR
+total « dividendes réinvestis » des sources s'applique tel quel). En version
+**distribuante**, la part investie ne croît que de la composante prix et les dividendes
+sont encaissés en cash : l'écart entre les deux à horizon donné mesure exactement
+l'effet des intérêts composés sur les dividendes (cf. la mécanique moyenne
+géométrique/composition de Jacquier, Kane & Marcus 2003, section 3). Le calcul ignore
+le frottement fiscal, qui pénalise en pratique davantage encore les fonds distribuants
+(imposition des dividendes au fil de l'eau).
+
 ### Inflation
 - US : ~**3,3 %/an** en moyenne depuis 1913 ; 2025 : 2,6 %. Zone euro : ~**2 %/an** depuis
   1999 (cible BCE) ; juin 2026 : 2,8 %. Convention du projet : **2,5 %/an**.

@@ -20,6 +20,9 @@ qui les entoure.
   log-normaux) couvrant 80 % des futurs simulés — parce qu'une ligne seule ment.
 - **Prix en direct** via CoinGecko (cryptos) et Yahoo Finance (ETF/actions), avec repli sur
   des instantanés si les API sont injoignables ; calcul des unités achetées au prix actuel.
+- **ETF capitalisants vs distribuants** : les dividendes réinvestis composent, les
+  dividendes encaissés ne composent plus — un panneau « Effet des intérêts composés »
+  chiffre l'écart entre les deux à l'horizon choisi.
 - **Versements mensuels (DCA)**, devise € / $, **pouvoir d'achat constant** (inflation
   déduite), **échelle logarithmique**, vue tableau année par année, mode sombre.
 
