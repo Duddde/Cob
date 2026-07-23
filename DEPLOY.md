@@ -17,6 +17,22 @@ l'app fonctionne quand même avec les prix indicatifs embarqués.
 
 ## Option A — VPS Hostinger (recommandé)
 
+### Le raccourci : une seule commande
+
+Connectez-vous en SSH (`ssh root@VOTRE_IP`) puis :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/duddde/cob/main/scripts/deploy-vps.sh | bash -s -- votredomaine.fr
+```
+
+Le script installe Node 22 si besoin, clone/actualise le code, lance l'app en
+service pm2 (redémarrage automatique au reboot) et configure nginx pour votre
+domaine. Relancez la même commande pour mettre à jour. Il ne reste qu'à pointer
+le DNS vers le VPS et, pour le HTTPS, exécuter la commande certbot affichée en
+fin de script.
+
+### Ou pas à pas, à la main
+
 ```bash
 # 1. Connexion au VPS
 ssh root@VOTRE_IP
@@ -87,9 +103,19 @@ Les plans mutualisés Hostinger n'exécutent pas de serveur Node persistant. Deu
 
 - **Passer sur un VPS Hostinger** (à partir du premier palier, largement suffisant :
   SnowBall consomme ~50 Mo de RAM) et suivre l'option A.
-- **Attendre/demander la version statique** : servir l'interface sans serveur Node est
-  possible (les projections sont calculées dans le navigateur), au prix des prix en
-  direct (CORS). C'est sur la feuille de route — ouvrez une issue si vous en avez besoin.
+- **Déployer la version statique** — les projections sont calculées dans le
+  navigateur, donc l'interface fonctionne sans serveur Node :
+
+  ```bash
+  npm run build:static
+  ```
+
+  puis téléversez le **contenu** du dossier `dist/` dans
+  hPanel → Gestionnaire de fichiers → `public_html` (ou via FTP). C'est tout.
+  Seule limite : les prix affichés sont les instantanés embarqués (badge « prix
+  indicatif ») — sans serveur, les API de prix refusent les requêtes navigateur
+  (CORS). Les projections, la répartition et toutes les fonctionnalités restent
+  identiques.
 
 ## Vérification après déploiement
 
