@@ -2,6 +2,8 @@
 
 > Laissez vos intérêts faire boule de neige : visualisez votre capital dans 5, 10, 15, 20 ans.
 
+**🚀 Démo en ligne : [srv725641.hstgr.cloud](https://srv725641.hstgr.cloud/)**
+
 **SnowBall** est une interface web open source (Node.js) pour visualiser ce que pourrait
 devenir un capital investi aujourd'hui dans une crypto, un ETF ou une action, en se basant
 sur les **performances historiques documentées** — et en montrant honnêtement l'incertitude
